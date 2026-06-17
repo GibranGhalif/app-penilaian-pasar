@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kalkulator Nilai Pasar Aset - SPI 300 | Kab. Sidenreng Rappang</title>
     <meta name="description" content="Aplikasi Penilaian Aset berdasarkan Standar Penilaian Indonesia (SPI 300)">
+    <meta name="google-site-verification" content="n7yz5j1jfE8ACbY8Csif2HXjdhMvB1rqCOZzkLbsiDQ" />
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -22,7 +23,7 @@
 <body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
 
     <!-- ==================== LOGIN SCREEN ==================== -->
-    <div id="login-screen" class="fixed inset-0 z-50 bg-cover bg-center flex items-center justify-center p-4" style="background-image: url('https://upload.wikimedia.org/wikipedia/commons/0/00/Lambang_Kabupaten_Sidenreng_Rappang.png');">
+    <div id="login-screen" class="fixed inset-0 z-50 bg-cover bg-center flex items-center justify-center p-4 bg-login-screen">
         <!-- Overlay -->
         <div class="absolute inset-0 bg-lime-900/80 backdrop-blur-sm"></div>
         
@@ -406,7 +407,9 @@
                                 Cara Menggunakan Firebase (Gratis)
                             </h4>
                             <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                                <li>Buka <a href="https://console.firebase.google.com/" target="_blank" class="underline font-semibold">Firebase Console</a></li>
+                                <li>Buka <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" class="underline font-semibold">
+    Firebase Console
+</a>
                                 <li>Buat project baru atau pilih project yang ada</li>
                                 <li>Klik "Realtime Database" → "Create Database"</li>
                                 <li>Pilih "Start in test mode" untuk pengembangan</li>

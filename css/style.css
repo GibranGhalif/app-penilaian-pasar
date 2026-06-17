@@ -1,5 +1,12 @@
 /* ==================== MAIN STYLES ==================== */
 
+/* Login screen background */
+.bg-login-screen {
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/0/00/Lambang_Kabupaten_Sidenreng_Rappang.png');
+    background-size: cover;
+    background-position: center;
+}
+
 /* Tab Styles */
 .active-tab {
     border-bottom: 2px solid #65a30d;
@@ -24,6 +31,7 @@ input[type="number"]::-webkit-outer-spin-button {
 
 input[type="number"] {
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 /* Animation */
@@ -141,9 +149,7 @@ input[type="number"] {
 
 /* Input focus styles */
 .input-focus:focus {
-    outline: none;
-    ring: 2px;
-    ring-color: #65a30d;
+    box-shadow: 0 0 0 3px rgba(101,163,13,0.3);
     border-color: #65a30d;
 }
 
