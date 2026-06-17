@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Nilai Pasar Aset - SPI 300 | Kab. Sidenreng Rappang</title>
+    <meta name="description" content="Aplikasi Penilaian Aset berdasarkan Standar Penilaian Indonesia (SPI 300)">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- SheetJS for Excel Import/Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <div id="login-screen" class="fixed inset-0 z-50 bg-cover bg-center flex items-center justify-center p-4" style="background-image: url('https://upload.wikimedia.org/wikipedia/commons/0/00/Lambang_Kabupaten_Sidenreng_Rappang.png');">
+        <!-- Overlay -->
+        <div class="absolute inset-0 bg-lime-900/80 backdrop-blur-sm"></div>
+        
+        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full p-8 border-t-4 border-lime-500 relative z-10">
+            <div class="text-center mb-8">
+                <div class="flex justify-center mb-4">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/00/Lambang_Kabupaten_Sidenreng_Rappang.png" alt="Logo Pemda" class="h-16 w-auto drop-shadow-md">
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800">Login Aplikasi</h1>
+                <p class="text-slate-500 text-sm mt-1">Kalkulator Penilaian Aset (SPI 300)</p>
+                <p class="text-lime-600 text-xs font-semibold mt-1 uppercase">Pemerintah Kab. Sidenreng Rappang</p>
+            </div>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                    <input type="text" id="username" class="w-full p-3 border border-slate-300 rounded focus:ring-2 focus:ring-lime-500 outline-none transition" placeholder="Masukkan username" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                    <input type="password" id="password" class="w-full p-3 border border-slate-300 rounded focus:ring-2 focus:ring-lime-500 outline-none transition" placeholder="Masukkan password" required>
+                </div>
+
+                <div id="login-error" class="text-red-500 text-sm text-center hidden">
+                    Username atau password salah.
+                </div>
+
+                <button type="submit" class="w-full bg-lime-700 hover:bg-lime-800 text-white font-bold py-3 rounded transition shadow-md">
+                    Masuk
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center text-xs text-slate-400">
+                <p>Default: admin / admin</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN APP CONTENT ==================== -->
+    <div id="app-content" class="hidden">
+
+        <!-- Header & Navigation -->
+        <header class="bg-lime-700 text-white shadow-lg sticky top-0 z-40">
+            <div class="container mx-auto px-4">
+                <div class="flex flex-col md:flex-row justify-between items-center py-4">
+                    <div class="mb-4 md:mb-0">
+                        <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-lime-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 3.666V14h-6v-3.334H9m0 3.667v3.333h6v-3.333M9 14h6m-6 0h6" />
+                            </svg>
+                            App Penilaian Aset
+                        </h1>
+                        <p class="text-lime-100 text-xs">SPI 300 - Penilaian Real Properti</p>
+                    </div>
+                    
+                    <nav class="flex flex-wrap gap-2 nav-buttons">
+                        <button onclick="switchView('dashboard')" id="nav-dashboard" class="px-4 py-2 rounded bg-lime-800 hover:bg-lime-600 text-white font-semibold text-sm transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                            </svg>
+                            Dashboard
+                        </button>
+                        <button onclick="switchView('calculator')" id="nav-calculator" class="px-4 py-2 rounded hover:bg-lime-600 text-lime-100 hover:text-white font-semibold text-sm transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 3.666V14h-6v-3.334H9m0 3.667v3.333h6v-3.333M9 14h6m-6 0h6" />
+                            </svg>
+                            Kalkulator
+                        </button>
+                        <button onclick="switchView('users')" id="nav-users" class="px-4 py-2 rounded hover:bg-lime-600 text-lime-100 hover:text-white font-semibold text-sm transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            Users
+                        </button>
+                        <button onclick="switchView('rekap')" id="nav-rekap" class="px-4 py-2 rounded hover:bg-lime-600 text-lime-100 hover:text-white font-semibold text-sm transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Rekap
+                        </button>
+                        <button onclick="switchView('cloud')" id="nav-cloud" class="px-4 py-2 rounded hover:bg-lime-600 text-lime-100 hover:text-white font-semibold text-sm transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                            </svg>
+                            Cloud
+                        </button>
+                        <button onclick="logout()" class="px-4 py-2 rounded hover:bg-red-700 text-red-100 hover:text-white font-semibold text-sm transition ml-2 border border-red-800 bg-red-900">
+                            Keluar
+                        </button>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Container -->
+        <main class="container mx-auto px-4 py-8 max-w-6xl">
+
+            <!-- ==================== VIEW: DASHBOARD ==================== -->
+            <div id="view-dashboard" class="block animate-fade-in">
+                <!-- Welcome Banner -->
+                <div class="bg-gradient-to-r from-lime-700 to-lime-500 rounded-2xl shadow-lg p-8 mb-8 text-white relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h2 class="text-3xl font-bold mb-2">Selamat Datang, <span id="welcome-username">Admin</span>!</h2>
+                        <p class="text-lime-50 max-w-2xl">
+                            Ini adalah dashboard Sistem Penilaian Aset berdasarkan Standar Penilaian Indonesia (SPI 300).
+                            Gunakan alat bantu ini untuk melakukan estimasi nilai pasar properti dengan cepat dan terstruktur.
+                        </p>
+                        <button onclick="switchView('calculator')" class="mt-6 bg-white text-lime-800 px-6 py-2 rounded-full font-bold hover:bg-lime-50 transition shadow-md inline-flex items-center gap-2">
+                            Mulai Penilaian Baru
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </button>
+                    </div>
+                    <!-- Decorative Circle -->
+                    <div class="absolute -bottom-10 -right-10 w-64 h-64 bg-lime-500 rounded-full opacity-20"></div>
+                    <div class="absolute -top-10 -right-0 w-32 h-32 bg-lime-400 rounded-full opacity-20"></div>
+                </div>
+
+                <!-- Stats / Info Grid -->
+                <div class="grid md:grid-cols-3 gap-6 mb-8">
+                    <!-- Card 1 -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition card-hover">
+                        <div class="w-12 h-12 bg-lime-100 rounded-lg flex items-center justify-center text-lime-600 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">Pendekatan Data Pasar</h3>
+                        <p class="text-slate-500 text-sm mb-4">Metode perbandingan data pasar yang membandingkan aset dengan properti sejenis.</p>
+                        <button onclick="switchView('calculator'); setTimeout(() => switchTab('market'), 100)" class="text-lime-600 text-sm font-semibold hover:underline">Gunakan Metode →</button>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition card-hover">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-green-600 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">Pendekatan Biaya</h3>
+                        <p class="text-slate-500 text-sm mb-4">Kalkulasi nilai tanah ditambah biaya penggantian baru (RCN) dikurangi penyusutan.</p>
+                        <button onclick="switchView('calculator'); setTimeout(() => switchTab('cost'), 100)" class="text-green-600 text-sm font-semibold hover:underline">Gunakan Metode →</button>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition card-hover">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">Pendekatan Pendapatan</h3>
+                        <p class="text-slate-500 text-sm mb-4">Metode kapitalisasi pendapatan untuk properti yang menghasilkan income (sewa/bisnis).</p>
+                        <button onclick="switchView('calculator'); setTimeout(() => switchTab('income'), 100)" class="text-purple-600 text-sm font-semibold hover:underline">Gunakan Metode →</button>
+                    </div>
+                </div>
+
+                <!-- Recent Info / Footer of Dashboard -->
+                <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                    <h3 class="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Informasi SPI 300</h3>
+                    <div class="grid md:grid-cols-2 gap-4 text-sm text-slate-600">
+                        <div class="flex items-start gap-2">
+                            <div class="w-2 h-2 mt-2 bg-lime-500 rounded-full"></div>
+                            <p>Penilaian Real Properti bertujuan untuk memberikan opini nilai ekonomi atas hak kepemilikan properti.</p>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <div class="w-2 h-2 mt-2 bg-lime-500 rounded-full"></div>
+                            <p>Nilai Pasar didasarkan pada prinsip <em>Highest and Best Use</em> (HBU).</p>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <div class="w-2 h-2 mt-2 bg-lime-500 rounded-full"></div>
+                            <p>Inspeksi lapangan wajib dilakukan untuk memverifikasi fisik dan kondisi aset.</p>
+                        </div>
+                        <div class="flex items-start gap-2">
+                            <div class="w-2 h-2 mt-2 bg-lime-500 rounded-full"></div>
+                            <p>Tanggal penilaian (Valuation Date) sangat krusial dalam menentukan asumsi pasar.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Include other views from separate HTML files or keep them here -->
+            <!-- For simplicity, views are included inline below -->
+
+            <!-- ==================== VIEW: USERS ==================== -->
+            <div id="view-users" class="hidden animate-fade-in">
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-8 border-t-4 border-lime-500">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-6">Manajemen Pengguna</h2>
+                    
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Add User Form -->
+                        <div>
+                            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <span class="bg-lime-100 text-lime-700 p-1 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                                </span>
+                                Tambah Pengguna Baru
+                            </h3>
+                            <form onsubmit="handleAddUser(event)" class="space-y-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Username Baru</label>
+                                    <input type="text" id="new-username" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-lime-500 outline-none" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                                    <input type="text" id="new-password" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-lime-500 outline-none" required>
+                                </div>
+                                <button type="submit" class="w-full bg-lime-600 hover:bg-lime-700 text-white font-bold py-2 rounded transition shadow-sm">
+                                    Simpan User
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- User List -->
+                        <div>
+                            <h3 class="text-lg font-semibold mb-4">Daftar Pengguna Aktif</h3>
+                            <div class="bg-white border rounded-lg overflow-hidden">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-slate-100 text-slate-600 font-bold uppercase text-xs">
+                                        <tr>
+                                            <th class="px-4 py-3">Username</th>
+                                            <th class="px-4 py-3 text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="user-list-body" class="divide-y divide-slate-100">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-4 p-4 bg-yellow-50 text-yellow-800 text-xs rounded border border-yellow-200">
+                                <p><strong>Catatan:</strong> User 'admin' adalah akun utama dan tidak dapat dihapus. Data tersimpan di browser (LocalStorage).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== VIEW: CLOUD STORAGE ==================== -->
+            <div id="view-cloud" class="hidden animate-fade-in">
+                <div class="grid md:grid-cols-3 gap-6">
+                    
+                    <!-- Left Column: Config & Save -->
+                    <div class="md:col-span-1 space-y-6">
+                        <!-- Firebase Config -->
+                        <div class="bg-white rounded-lg shadow-sm p-6 border-t-4 border-blue-500">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Konfigurasi Firebase
+                            </h3>
+                            <p class="text-xs text-slate-500 mb-4">Masukkan konfigurasi Firebase Anda untuk menyimpan data secara online.</p>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">API Key</label>
+                                    <input type="text" id="firebase-apiKey" class="w-full p-2 border rounded text-sm" placeholder="AIzaSy...">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Auth Domain</label>
+                                    <input type="text" id="firebase-authDomain" class="w-full p-2 border rounded text-sm" placeholder="project-id.firebaseapp.com">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Database URL</label>
+                                    <input type="text" id="firebase-databaseURL" class="w-full p-2 border rounded text-sm" placeholder="https://project-id-default-rtdb.firebaseio.com">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Project ID</label>
+                                    <input type="text" id="firebase-projectId" class="w-full p-2 border rounded text-sm" placeholder="project-id">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Storage Bucket</label>
+                                    <input type="text" id="firebase-storageBucket" class="w-full p-2 border rounded text-sm" placeholder="project-id.appspot.com">
+                                </div>
+                                
+                                <div class="flex gap-2 pt-2">
+                                    <button onclick="saveFirebaseConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-semibold">
+                                        Simpan Config
+                                    </button>
+                                    <button onclick="connectFirebase()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm font-semibold">
+                                        Hubungkan
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="firebase-status" class="mt-4 p-3 rounded text-sm bg-slate-100 text-slate-600">
+                                <span class="inline-block w-2 h-2 rounded-full bg-slate-400 mr-2"></span>
+                                Belum terhubung
+                            </div>
+                        </div>
+
+                        <!-- Quick Save -->
+                        <div class="bg-white rounded-lg shadow-sm p-6 border-t-4 border-lime-500">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-lime-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                                Simpan Data Penilaian
+                            </h3>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Nama/Judul Penilaian</label>
+                                    <input type="text" id="cloud-save-title" class="w-full p-2 border rounded text-sm" placeholder="Penilaian Tanah Jl. Merdeka">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Catatan (Opsional)</label>
+                                    <textarea id="cloud-save-notes" class="w-full p-2 border rounded text-sm" rows="2" placeholder="Catatan tambahan..."></textarea>
+                                </div>
+                                
+                                <button onclick="saveToCloud()" class="w-full bg-lime-600 hover:bg-lime-700 text-white py-3 rounded font-semibold flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    Simpan ke Cloud
+                                </button>
+                                
+                                <button onclick="saveToLocal()" class="w-full bg-slate-600 hover:bg-slate-700 text-white py-2 rounded font-semibold text-sm flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                                    </svg>
+                                    Simpan Lokal (Browser)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Data List -->
+                    <div class="md:col-span-2">
+                        <div class="bg-white rounded-lg shadow-sm p-6 border-t-4 border-purple-500">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                    </svg>
+                                    Riwayat Data Tersimpan
+                                </h3>
+                                <div class="flex gap-2">
+                                    <button onclick="loadCloudData()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-semibold flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                        Refresh
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Tabs: Cloud / Local -->
+                            <div class="flex border-b mb-4">
+                                <button onclick="switchStorageTab('cloud')" id="storage-tab-cloud" class="px-4 py-2 border-b-2 border-purple-500 text-purple-600 font-semibold text-sm">
+                                    Data Cloud
+                                </button>
+                                <button onclick="switchStorageTab('local')" id="storage-tab-local" class="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm">
+                                    Data Lokal
+                                </button>
+                            </div>
+
+                            <!-- Cloud Data List -->
+                            <div id="cloud-data-list" class="space-y-3 max-h-96 overflow-y-auto">
+                                <div class="text-center py-8 text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                                    </svg>
+                                    <p>Hubungkan Firebase untuk melihat data cloud</p>
+                                </div>
+                            </div>
+
+                            <!-- Local Data List -->
+                            <div id="local-data-list" class="space-y-3 hidden max-h-96 overflow-y-auto">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Info Box -->
+                        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Cara Menggunakan Firebase (Gratis)
+                            </h4>
+                            <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                                <li>Buka <a href="https://console.firebase.google.com/" target="_blank" class="underline font-semibold">Firebase Console</a></li>
+                                <li>Buat project baru atau pilih project yang ada</li>
+                                <li>Klik "Realtime Database" → "Create Database"</li>
+                                <li>Pilih "Start in test mode" untuk pengembangan</li>
+                                <li>Klik gear icon → "Project settings" untuk mendapatkan config</li>
+                                <li>Copy API Key, Auth Domain, Database URL, Project ID, Storage Bucket</li>
+                                <li>Paste ke form konfigurasi di atas</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== VIEW: REKAP DATA ==================== -->
+            <div id="view-rekap" class="hidden animate-fade-in">
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border-t-4 border-lime-500" id="rekap-print-area">
+                    
+                    <!-- Header Rekap -->
+                    <div class="text-center mb-6 border-b pb-6">
+                        <div class="flex justify-center mb-3">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/0/00/Lambang_Kabupaten_Sidenreng_Rappang.png" alt="Logo" class="h-16">
+                        </div>
+                        <h2 class="text-xl font-bold text-slate-800 uppercase">Pemerintah Kabupaten Sidenreng Rappang</h2>
+                        <h3 class="text-lg font-bold text-lime-700">Laporan Penilaian Aset</h3>
+                        <p class="text-sm text-slate-500">Berdasarkan Standar Penilaian Indonesia (SPI 300)</p>
+                    </div>
+
+                    <!-- Info Penilaian -->
+                    <div class="mb-6">
+                        <h4 class="text-md font-bold text-slate-700 mb-3 bg-lime-100 p-2 rounded">A. INFORMASI PENILAIAN</h4>
+                        <div class="grid grid-cols-2 gap-4 text-sm" id="rekap-info-penilaian">
+                        </div>
+                    </div>
+
+                    <!-- Data Objek Penilaian -->
+                    <div class="mb-6">
+                        <h4 class="text-md font-bold text-slate-700 mb-3 bg-lime-100 p-2 rounded">B. DATA OBJEK YANG DINILAI</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm border-collapse border border-slate-300" id="rekap-tabel-objek">
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Data Pembanding -->
+                    <div class="mb-6">
+                        <h4 class="text-md font-bold text-slate-700 mb-3 bg-lime-100 p-2 rounded">C. DATA PEMBANDING (KOMPARABEL)</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs border-collapse border border-slate-300" id="rekap-tabel-pembanding">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="border border-slate-300 p-2 text-left">No</th>
+                                        <th class="border border-slate-300 p-2 text-left">NOP PBB-P2</th>
+                                        <th class="border border-slate-300 p-2 text-left">Alamat</th>
+                                        <th class="border border-slate-300 p-2 text-left">Kel/Desa</th>
+                                        <th class="border border-slate-300 p-2 text-left">Kecamatan</th>
+                                        <th class="border border-slate-300 p-2 text-left">Jenis</th>
+                                        <th class="border border-slate-300 p-2 text-right">L.Tanah</th>
+                                        <th class="border border-slate-300 p-2 text-right">L.Bgn</th>
+                                        <th class="border border-slate-300 p-2 text-right">Harga</th>
+                                        <th class="border border-slate-300 p-2 text-right">Harga/m²</th>
+                                        <th class="border border-slate-300 p-2 text-center">Sumber</th>
+                                        <th class="border border-slate-300 p-2 text-right">Adj</th>
+                                        <th class="border border-slate-300 p-2 text-right">Indikasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rekap-tbody-pembanding"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Analisis & Perhitungan -->
+                    <div class="mb-6">
+                        <h4 class="text-md font-bold text-slate-700 mb-3 bg-lime-100 p-2 rounded">D. ANALISIS DAN PERHITUNGAN</h4>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="bg-slate-50 p-4 rounded border">
+                                <h5 class="font-semibold text-sm mb-3">Statistik Data Pembanding</h5>
+                                <table class="w-full text-sm" id="rekap-statistik"><tbody></tbody></table>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded border">
+                                <h5 class="font-semibold text-sm mb-3">Ringkasan Penyesuaian</h5>
+                                <table class="w-full text-sm" id="rekap-penyesuaian"><tbody></tbody></table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kesimpulan Nilai -->
+                    <div class="mb-6">
+                        <h4 class="text-md font-bold text-slate-700 mb-3 bg-lime-100 p-2 rounded">E. KESIMPULAN NILAI</h4>
+                        <div class="bg-lime-50 border-2 border-lime-300 rounded-lg p-6 text-center" id="rekap-kesimpulan"></div>
+                    </div>
+
+                    <!-- Catatan -->
+                    <div class="mb-6">
+                        <h4 class="text-md font-bold text-slate-700 mb-3 bg-lime-100 p-2 rounded">F. CATATAN DAN ASUMSI</h4>
+                        <div class="text-sm text-slate-600 space-y-2 bg-yellow-50 p-4 rounded border border-yellow-200">
+                            <p>1. Penilaian ini dilakukan berdasarkan Standar Penilaian Indonesia (SPI) khususnya SPI 300 tentang Penilaian Real Properti.</p>
+                            <p>2. Nilai pasar adalah estimasi nilai pada tanggal penilaian dalam transaksi yang wajar antara penjual dan pembeli yang berminat.</p>
+                            <p>3. Penyesuaian dilakukan berdasarkan perbedaan karakteristik fisik, lokasi, legalitas, dan waktu transaksi.</p>
+                            <p>4. Hasil penilaian ini hanya berlaku untuk tujuan sebagaimana disebutkan dan tidak dapat digunakan untuk tujuan lain.</p>
+                            <p>5. Nilai yang tercantum merupakan nilai estimasi dan dapat berbeda dengan nilai transaksi aktual.</p>
+                        </div>
+                    </div>
+
+                    <!-- Tanda Tangan -->
+                    <div class="mt-8 pt-6 border-t">
+                        <div class="grid grid-cols-2 gap-8">
+                            <div class="text-center">
+                                <p class="text-sm text-slate-600 mb-16">Mengetahui,</p>
+                                <p class="font-bold text-sm border-t border-slate-400 pt-2 inline-block px-8" id="rekap-ttd-mengetahui">________________________</p>
+                                <p class="text-xs text-slate-500">NIP. ________________________</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-slate-600">Pangkajene, <span id="rekap-tanggal"></span></p>
+                                <p class="text-sm text-slate-600 mb-12">Penilai,</p>
+                                <p class="font-bold text-sm border-t border-slate-400 pt-2 inline-block px-8" id="rekap-ttd-penilai">________________________</p>
+                                <p class="text-xs text-slate-500">NIP. ________________________</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-3 mt-6 no-print">
+                    <button onclick="generateRekap()" class="bg-lime-600 hover:bg-lime-700 text-white px-6 py-3 rounded font-semibold flex items-center gap-2 shadow">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        Refresh Data
+                    </button>
+                    <button onclick="printRekap()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded font-semibold flex items-center gap-2 shadow">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        Cetak Laporan
+                    </button>
+                    <button onclick="exportRekapToPDF()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded font-semibold flex items-center gap-2 shadow">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                        Export PDF
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==================== VIEW: CALCULATOR ==================== -->
+            <div id="view-calculator" class="hidden">
+            
+                <!-- Definition Card -->
+                <div class="bg-white rounded-lg shadow-sm p-6 mb-8 border-l-4 border-lime-500">
+                    <h2 class="text-lg font-bold text-slate-800 mb-2">Definisi Nilai Pasar (SPI 101 / KPUP)</h2>
+                    <p class="text-slate-600 text-sm italic">
+                        "Estimasi sejumlah uang yang dapat diperoleh dari hasil penukaran suatu aset atau liabilitas pada tanggal penilaian, antara pembeli yang berminat membeli dengan penjual yang berminat menjual, dalam suatu transaksi bebas ikatan, yang pemasarannya dilakukan secara layak..."
+                    </p>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div class="flex border-b border-slate-200 mb-6 overflow-x-auto">
+                    <button onclick="switchTab('market')" id="tab-market" class="px-6 py-3 active-tab whitespace-nowrap transition-colors">
+                        Pendekatan Data Pasar
+                    </button>
+                    <button onclick="switchTab('cost')" id="tab-cost" class="px-6 py-3 inactive-tab whitespace-nowrap transition-colors">
+                        Pendekatan Biaya
+                    </button>
+                    <button onclick="switchTab('income')" id="tab-income" class="px-6 py-3 inactive-tab whitespace-nowrap transition-colors">
+                        Pendekatan Pendapatan
+                    </button>
+                </div>
+
+                <!-- Section 1: Market Data Approach -->
+                <section id="section-market" class="block animate-fade-in">
+                    
+                    <!-- Import/Export Buttons -->
+                    <div class="flex flex-wrap gap-3 mb-6">
+                        <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 shadow">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            Export Excel
+                        </button>
+                        <label class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 shadow cursor-pointer">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                            Import Excel
+                            <input type="file" id="importFile" accept=".xlsx,.xls" onchange="importFromExcel(event)" class="hidden">
+                        </label>
+                        <button onclick="clearAllData()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 shadow">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            Hapus Semua
+                        </button>
+                    </div>
+
+                    <!-- Objek yang Dinilai -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm mb-6 border-l-4 border-lime-500">
+                        <h3 class="text-xl font-bold mb-4 text-lime-800">Data Objek yang Dinilai</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium mb-1">NOP PBB-P2</label>
+                                <input type="text" id="obj-nop" class="w-full p-2 border rounded text-sm" placeholder="33.XX.XXX.XXX.XXX.XXXX.X">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Nama Pemilik/Wajib Pajak</label>
+                                <input type="text" id="obj-pemilik" class="w-full p-2 border rounded text-sm" placeholder="Nama Pemilik">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Alamat Objek</label>
+                                <input type="text" id="obj-alamat" class="w-full p-2 border rounded text-sm" placeholder="Jl. ...">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Kecamatan</label>
+                                <select id="obj-kecamatan" onchange="updateKelurahan('obj-kecamatan', 'obj-kelurahan')" class="w-full p-2 border rounded text-sm">
+                                    <option value="">-- Pilih Kecamatan --</option>
+                                    <option value="Baranti">Baranti</option>
+                                    <option value="Dua Pitue">Dua Pitue</option>
+                                    <option value="Kulo">Kulo</option>
+                                    <option value="Maritengngae">Maritengngae</option>
+                                    <option value="Panca Lautang">Panca Lautang</option>
+                                    <option value="Panca Rijang">Panca Rijang</option>
+                                    <option value="Pitu Riase">Pitu Riase</option>
+                                    <option value="Pitu Riawa">Pitu Riawa</option>
+                                    <option value="Tellu Limpoe">Tellu Limpoe</option>
+                                    <option value="Watang Pulu">Watang Pulu</option>
+                                    <option value="Watang Sidenreng">Watang Sidenreng</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Kelurahan/Desa</label>
+                                <select id="obj-kelurahan" class="w-full p-2 border rounded text-sm">
+                                    <option value="">-- Pilih Kelurahan/Desa --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Jenis Properti</label>
+                                <select id="obj-jenis" class="w-full p-2 border rounded text-sm">
+                                    <option value="">-- Pilih --</option>
+                                    <option value="Rumah Tinggal">Rumah Tinggal</option>
+                                    <option value="Ruko">Ruko</option>
+                                    <option value="Tanah Kosong">Tanah Kosong</option>
+                                    <option value="Tanah Perumahan">Tanah Perumahan</option>
+                                    <option value="Sawah Irigasi">Sawah Irigasi</option>
+                                    <option value="Sawah Tadah Hujan">Sawah Tadah Hujan</option>
+                                    <option value="Kebun">Kebun</option>
+                                    <option value="Gedung">Gedung</option>
+                                    <option value="Pabrik">Pabrik</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Luas Tanah (m²)</label>
+                                <input type="number" id="obj-luas-tanah" class="w-full p-2 border rounded text-sm" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Luas Bangunan (m²)</label>
+                                <input type="number" id="obj-luas-bangunan" class="w-full p-2 border rounded text-sm" placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Tahun Dibangun</label>
+                                <input type="number" id="obj-tahun" class="w-full p-2 border rounded text-sm" placeholder="2020">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Kondisi Bangunan</label>
+                                <select id="obj-kondisi" class="w-full p-2 border rounded text-sm">
+                                    <option value="">-- Pilih --</option>
+                                    <option value="Baik">Baik</option>
+                                    <option value="Sedang">Sedang</option>
+                                    <option value="Rusak Ringan">Rusak Ringan</option>
+                                    <option value="Rusak Berat">Rusak Berat</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Tanggal Penilaian</label>
+                                <input type="date" id="obj-tgl-nilai" class="w-full p-2 border rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">Penilai</label>
+                                <input type="text" id="obj-penilai" class="w-full p-2 border rounded text-sm" placeholder="Nama Penilai">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Pembanding Section -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-lime-800">Data Pembanding (Komparabel)</h3>
+                            <button onclick="addPembanding()" class="bg-lime-600 hover:bg-lime-700 text-white px-3 py-1 rounded text-sm font-semibold flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                                Tambah Pembanding
+                            </button>
+                        </div>
+                        
+                        <div id="pembanding-container" class="space-y-4">
+                            <!-- Pembanding cards will be added here dynamically -->
+                        </div>
+                        
+                        <p class="text-xs text-slate-500 mt-4">Klik tombol "Tambah Pembanding" untuk menambah data komparabel baru.</p>
+                    </div>
+
+                    <!-- Calculate Button -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                        <button onclick="calculateMarketApproach()" class="w-full bg-lime-600 hover:bg-lime-700 text-white font-bold py-3 rounded transition text-lg">
+                            Hitung Nilai Pasar
+                        </button>
+                    </div>
+
+                    <!-- Result Section -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                        <h3 class="text-xl font-bold mb-4 text-slate-800">Hasil Indikasi Nilai</h3>
+                        <div id="result-market" class="text-center py-8">
+                            <p class="text-slate-400">Silakan masukkan data dan klik hitung</p>
+                        </div>
+                        <div class="mt-4 text-xs text-slate-500 bg-yellow-50 p-3 rounded border border-yellow-200">
+                            <strong>Catatan:</strong> Penyesuaian (Adjustment) dilakukan berdasarkan perbedaan karakteristik (lokasi, fisik, legalitas, waktu) antara aset pembanding dengan aset yang dinilai.
+                        </div>
+                    </div>
+
+                    <!-- Data Display Section -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-bold mb-4 text-slate-800">Ringkasan Data Terinput</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs border-collapse" id="table-summary">
+                                <thead class="bg-lime-100 text-lime-800">
+                                    <tr>
+                                        <th class="border p-2 text-left">Keterangan</th>
+                                        <th class="border p-2 text-left">NOP</th>
+                                        <th class="border p-2 text-left">Alamat</th>
+                                        <th class="border p-2 text-right">L.Tanah</th>
+                                        <th class="border p-2 text-right">L.Bangunan</th>
+                                        <th class="border p-2 text-right">Harga/Nilai</th>
+                                        <th class="border p-2 text-right">Harga/m²</th>
+                                        <th class="border p-2 text-right">Penyesuaian</th>
+                                        <th class="border p-2 text-right">Nilai Indikasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-summary-body">
+                                    <tr>
+                                        <td colspan="9" class="border p-4 text-center text-slate-400">Belum ada data</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 2: Cost Approach -->
+                <section id="section-cost" class="hidden animate-fade-in">
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="bg-white p-6 rounded-lg shadow-sm">
+                            <h3 class="text-xl font-bold mb-4 text-green-800">Kalkulasi Biaya (Cost Approach)</h3>
+                            <p class="text-sm text-slate-500 mb-4">Nilai Tanah + (Biaya Penggantian Baru - Penyusutan).</p>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Nilai Tanah (Market Value) (Rp)</label>
+                                    <input type="text" id="cost-land" onkeyup="formatInputCurrency(this)" class="w-full p-3 border rounded focus:ring-2 focus:ring-green-500 outline-none" placeholder="Nilai pasar tanah kosong">
+                                </div>
+
+                                <div class="border-t pt-4 mt-4">
+                                    <label class="block text-sm font-medium mb-1">Biaya Penggantian Baru (RCN) (Rp)</label>
+                                    <input type="text" id="cost-rcn" onkeyup="formatInputCurrency(this)" class="w-full p-3 border rounded focus:ring-2 focus:ring-green-500 outline-none" placeholder="Biaya membangun baru saat ini">
+                                </div>
+
+                                <div class="bg-slate-50 p-4 rounded border border-slate-200">
+                                    <h4 class="font-semibold text-sm mb-3">Faktor Penyusutan (Depresiasi)</h4>
+                                    
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs font-medium mb-1">Fisik (%)</label>
+                                            <input type="number" id="dep-physical" class="w-full p-2 border rounded text-sm" placeholder="0-100" max="100">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium mb-1">Fungsional (%)</label>
+                                            <input type="number" id="dep-functional" class="w-full p-2 border rounded text-sm" placeholder="0-100" max="100">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium mb-1">Ekonomis/Eksternal (%)</label>
+                                            <input type="number" id="dep-economic" class="w-full p-2 border rounded text-sm" placeholder="0-100" max="100">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button onclick="calculateCostApproach()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded transition">
+                                    Hitung Nilai Properti
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow-sm h-fit sticky top-24">
+                            <h3 class="text-xl font-bold mb-4 text-slate-800">Rincian Perhitungan</h3>
+                            <div id="result-cost" class="text-center py-8">
+                                <p class="text-slate-400">Masukkan komponen biaya untuk melihat hasil</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 3: Income Approach -->
+                <section id="section-income" class="hidden animate-fade-in">
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="bg-white p-6 rounded-lg shadow-sm">
+                            <h3 class="text-xl font-bold mb-4 text-purple-800">Kapitalisasi Pendapatan</h3>
+                            <p class="text-sm text-slate-500 mb-4">Mengkonversi pendapatan bersih menjadi estimasi nilai.</p>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Pendapatan Kotor Efektif (Per Tahun) (Rp)</label>
+                                    <input type="text" id="inc-gross" onkeyup="formatInputCurrency(this)" class="w-full p-3 border rounded focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Gross Income">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Biaya Operasional (Per Tahun) (Rp)</label>
+                                    <input type="text" id="inc-opex" onkeyup="formatInputCurrency(this)" class="w-full p-3 border rounded focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Operating Expenses (OpEx)">
+                                </div>
+
+                                <div class="p-4 bg-purple-50 rounded border border-purple-100">
+                                    <label class="block text-sm font-bold text-purple-900 mb-1">Tingkat Kapitalisasi (Cap Rate) (%)</label>
+                                    <p class="text-xs text-purple-700 mb-2">Rate pengembalian modal (Yield) yang diharapkan pasar.</p>
+                                    <input type="number" id="inc-rate" class="w-full p-3 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Contoh: 8.5" step="0.1">
+                                </div>
+
+                                <button onclick="calculateIncomeApproach()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded transition">
+                                    Hitung Nilai Kapitalisasi
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow-sm h-fit sticky top-24">
+                            <h3 class="text-xl font-bold mb-4 text-slate-800">Hasil Analisis Pendapatan</h3>
+                            <div id="result-income" class="text-center py-8">
+                                <p class="text-slate-400">Data belum lengkap</p>
+                            </div>
+                            <div class="mt-4 text-xs text-slate-500 bg-yellow-50 p-3 rounded border border-yellow-200">
+                                <strong>Rumus Dasar:</strong> Nilai = Pendapatan Bersih (NOI) / Tingkat Kapitalisasi
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div> <!-- End of View Calculator -->
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-slate-800 text-slate-300 py-6 mt-12">
+            <div class="container mx-auto px-4 text-center text-sm">
+                <p>© 2024 App Penilaian Aset - Pemerintah Kab. Sidenreng Rappang</p>
+                <p class="mt-2 text-xs text-slate-500">
+                    DISCLAIMER: Aplikasi ini hanya alat bantu simulasi. Penilaian resmi harus dilakukan oleh Penilai Publik (KJPP) berlisensi sesuai kode etik dan standar SPI yang berlaku lengkap.
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/calculator.js"></script>
+    <script src="js/excel.js"></script>
+    <script src="js/cloud.js"></script>
+    <script src="js/rekap.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
